@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>複数検索エンジン同時検索</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #searchQuery {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            margin: 5px;
+        }
+        #links a {
+            margin-right: 10px;
+        }
+        #history-panel {
+            margin-top: 20px;
+            border-top: 1px solid #ccc;
+            padding-top: 20px;
+        }
+        #historyList li {
+            cursor: pointer;
+            padding: 5px;
+        }
+        #historyList li:hover {
+            background-color: #f0f0f0;
+        }
+        #message {
+            color: green;
+            margin: 10px 0;
+        }
+        #maintenance {
+            margin-top: 20px;
+            font-size: 0.8em;
+        }
+        .category-label {
+            font-weight: bold;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .category-group {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        .category-group label {
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .search-categories {
+            margin-bottom: 15px;
+            line-height: 2;
+        }
+        #otherOptions label {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        .category-controls {
+            margin-bottom: 10px;
+        }
+        .category-controls button {
+            margin-right: 10px;
+        }
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .category-buttons {
+            margin-left: 10px;
+        }
+        .category-buttons button {
+            padding: 3px 6px;
+            margin-right: 5px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div id="main-content">
+        <h1>調査・情報検索ツール</h1>
+
+        <input type="text" id="searchQuery" placeholder="検索語句を入力してください">
+
+        <div id="mainButtons">
+            <button id="searchAll">まとめて検索</button>
+            <button id="copyQuery">検索語句のコピー</button>
+            <button id="clearQuery">検索語句のクリア</button>
+        </div>
+
+        <h2>検索サイト選択</h2>
+        <div class="category-controls">
+            <button id="selectAll">全て選択</button>
+            <button id="deselectAll">全て解除</button>
+        </div>
+        
+        <div id="engineOptions">
+            <div class="search-categories">
+                <span class="category-label">【検索エンジン】</span>
+                <span class="category-buttons">
+                    <button class="select-category" data-category="search">選択</button>
+                    <button class="deselect-category" data-category="search">解除</button>
+                </span>
+                <span class="category-group">
+                    <label><input type="checkbox" id="google" class="search-checkbox" checked> <a href="https://google.co.jp" target="_blank">Google</a></label>
+                    <label><input type="checkbox" id="wikipedia" class="search-checkbox" checked> <a href="https://ja.wikipedia.org/" target="_blank">Wikipedia</a></label>
+                </span>
+            </div>
+
+            <div class="search-categories">
+                <span class="category-label">【AI】</span>
+                <span class="category-buttons">
+                    <button class="select-category" data-category="ai">選択</button>
+                    <button class="deselect-category" data-category="ai">解除</button>
+                </span>
+                <span class="category-group">
+                    <label><input type="checkbox" id="perplexity" class="ai-checkbox" checked> <a href="https://www.perplexity.ai" target="_blank">Perplexity</a></label>
+                    <label><input type="checkbox" id="genspark" class="ai-checkbox" checked> <a href="https://www.genspark.ai" target="_blank">GenSpark</a></label>
+                    <label><input type="checkbox" id="felo" class="ai-checkbox" checked> <a href="https://felo.ai" target="_blank">Felo</a></label>
+                    <label><input type="checkbox" id="chatgpt" class="ai-checkbox" checked> <a href="https://chatgpt.com" target="_blank">ChatGPT</a></label>
+                    <label><input type="checkbox" id="claude" class="ai-checkbox" checked> <a href="https://claude.ai" target="_blank">Claude</a></label>
+                </span>
+            </div>
+        </div>
+
+        <h2>その他オプション</h2>
+        <div id="otherOptions">
+            <label><input type="checkbox" id="enterToSearch" checked> エンターキーで検索</label>
+            <label><input type="checkbox" id="recordHistory" checked> 検索履歴を記録する</label>
+        </div>
+
+        <div id="links">
+            <a href="https://gemini.google.com/app?hl=ja" target="_blank">Gemini</a>
+            <a href="https://aistudio.google.com/app/prompts/new_chat" target="_blank">AI Studio</a>
+            <a href="https://claude.ai/new" target="_blank">Claude</a>
+            <a href="https://mapify.so/ja/app/new" target="_blank">Mapify</a>
+        </div>
+
+        <div id="maintenance">
+            <a href="https://github.com/anydhjyn1/anydhjyn1.github.io/edit/main/index.html" target="_blank">メンテナンス</a>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <div id="history-panel">
+        <h2>検索履歴</h2>
+        <button id="clearHistory">検索履歴をクリア</button>
+        <ul id="historyList"></ul>
+    </div>
+
+    <script>
+        function saveSettings() {
+            const settings = {
+                engines: {
+                    google: document.getElementById('google').checked,
+                    wikipedia: document.getElementById('wikipedia').checked,
+                    perplexity: document.getElementById('perplexity').checked,
+                    genspark: document.getElementById('genspark').checked,
+                    felo: document.getElementById('felo').checked,
+                    chatgpt: document.getElementById('chatgpt').checked,
+                    claude: document.getElementById('claude').checked,
+                },
+                options: {
+                    enterToSearch: document.getElementById('enterToSearch').checked,
+                    recordHistory: document.getElementById('recordHistory').checked
+                }
+            };
+            localStorage.setItem('searchSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('searchSettings'));
+            if (settings) {
+                Object.keys(settings.engines).forEach(engine => {
+                    const checkbox = document.getElementById(engine);
+                    if (checkbox) {
+                        checkbox.checked = settings.engines[engine];
+                    }
+                });
+                document.getElementById('enterToSearch').checked = settings.options.enterToSearch;
+                document.getElementById('recordHistory').checked = settings.options.recordHistory;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchQuery = document.getElementById('searchQuery');
+            const searchAllButton = document.getElementById('searchAll');
+            const copyQueryButton = document.getElementById('copyQuery');
+            const clearQueryButton = document.getElementById('clearQuery');
+            const clearHistoryButton = document.getElementById('clearHistory');
+            const selectAllButton = document.getElementById('selectAll');
+            const deselectAllButton = document.getElementById('deselectAll');
+
+            const checkboxes = document.querySelectorAll('#engineOptions input[type="checkbox"], #otherOptions input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', saveSettings);
+            });
+
+            searchAllButton.addEventListener('click', searchAll);
+            copyQueryButton.addEventListener('click', copyQuery);
+            clearQueryButton.addEventListener('click', clearQuery);
+            clearHistoryButton.addEventListener('click', clearHistory);
+            
+            // 全選択・全解除ボタンのイベントリスナー
+            selectAllButton.addEventListener('click', function() {
+                const engineCheckboxes = document.querySelectorAll('#engineOptions input[type="checkbox"]');
+                engineCheckboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                });
+                saveSettings();
+                showMessage('すべてのサイトを選択しました');
+            });
+            
+            deselectAllButton.addEventListener('click', function() {
+                const engineCheckboxes = document.querySelectorAll('#engineOptions input[type="checkbox"]');
+                engineCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                saveSettings();
+                showMessage('すべてのサイトの選択を解除しました');
+            });
+
+            // カテゴリーごとの選択・解除ボタンのイベントリスナーを設定
+            document.querySelectorAll('.select-category').forEach(button => {
+                button.addEventListener('click', function() {
+                    const category = this.getAttribute('data-category');
+                    const checkboxes = document.querySelectorAll(`.${category}-checkbox`);
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = true;
+                    });
+                    saveSettings();
+                    showMessage(`【${getCategoryLabel(category)}】カテゴリーのすべてのサイトを選択しました`);
+                });
+            });
+
+            document.querySelectorAll('.deselect-category').forEach(button => {
+                button.addEventListener('click', function() {
+                    const category = this.getAttribute('data-category');
+                    const checkboxes = document.querySelectorAll(`.${category}-checkbox`);
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    saveSettings();
+                    showMessage(`【${getCategoryLabel(category)}】カテゴリーのすべてのサイトの選択を解除しました`);
+                });
+            });
+
+            // カテゴリー名を日本語で取得する関数
+            function getCategoryLabel(category) {
+                const categoryLabels = {
+                    'search': '検索エンジン',
+                    'ai': 'AI'
+                };
+                return categoryLabels[category] || category;
+            }
+
+            searchQuery.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter' && document.getElementById('enterToSearch').checked) {
+                    searchAll();
+                }
+            });
+
+            loadSettings();
+            loadHistory();
+        });
+
+        function getAISearchQuery(query) {
+            return `${query} について教えてください。`;
+        }
+
+        function formatQuery(query) {
+            return query.replace(/[\s　]/g, '+');
+        }
+
+        function searchAll() {
+            const baseQuery = formatQuery(document.getElementById('searchQuery').value);
+            const aiQuery = getAISearchQuery(baseQuery);
+            const engines = [
+                // 検索エンジン
+                {id: 'google', url: `https://www.google.com/search?q=${baseQuery}`},
+                {id: 'wikipedia', url: `https://ja.wikipedia.org/wiki/${baseQuery}`},
+                
+                // AI検索
+                {id: 'perplexity', url: `https://www.perplexity.ai/search?q=${aiQuery}`},
+                {id: 'genspark', url: `https://www.genspark.ai/search?query=${aiQuery}`},
+                {id: 'felo', url: `https://felo.ai/search?q=${aiQuery}`},
+                {id: 'chatgpt', url: `https://chatgpt.com/?q=${aiQuery}`},
+                {id: 'claude', url: `https://claude.ai/new?q=${aiQuery}`}
+            ];
+
+            engines.forEach(engine => {
+                if (document.getElementById(engine.id).checked) {
+                    window.open(engine.url, '_blank');
+                }
+            });
+
+            if (document.getElementById('recordHistory').checked) {
+                addToHistory(document.getElementById('searchQuery').value);
+            }
+            saveSettings();
+        }
+
+        function copyQuery() {
+            const query = document.getElementById('searchQuery');
+            query.select();
+            document.execCommand('copy');
+            showMessage('検索語句をクリップボードにコピーしました。');
+        }
+
+        function clearQuery() {
+            document.getElementById('searchQuery').value = '';
+            showMessage('検索語句をクリアしました。');
+        }
+
+        function showMessage(msg) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = msg;
+            setTimeout(() => {
+                messageDiv.textContent = '';
+            }, 3000);
+        }
+
+        function addToHistory(query) {
+            let history = JSON.parse(localStorage.getItem('searchHistory')) || [];
+            history.unshift(query);
+            history = history.slice(0, 10);
+            localStorage.setItem('searchHistory', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const historyList = document.getElementById('historyList');
+            const history = JSON.parse(localStorage.getItem('searchHistory')) || [];
+            historyList.innerHTML = '';
+            history.forEach(query => {
+                const li = document.createElement('li');
+                li.textContent = query;
+                li.addEventListener('click', () => {
+                    // 検索ボックスに履歴を入力
+                    const searchBox = document.getElementById('searchQuery');
+                    searchBox.value = query;
+                    
+                    // カーソルを文末に移動
+                    searchBox.focus();
+                    searchBox.setSelectionRange(searchBox.value.length, searchBox.value.length);
+                    
+                    // 現在のチェックボックスの設定で検索を実行
+                    searchAll();
+                });
+                historyList.appendChild(li);
+            });
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('searchHistory');
+            loadHistory();
+            showMessage('検索履歴をクリアしました。');
+        }
+    </script>
+</body>
+</html>
